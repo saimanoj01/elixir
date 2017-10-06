@@ -533,3 +533,37 @@ These attributes are not variables in the conventional sense. Use them for confi
 The Erlang conventions for names are different—variables start with an uppercase letter and atoms are simple lowercase names. So, for example, the Erlang module timer is called just that, the atom timer. In Elixir we write that as :timer. If you want to refer to the tc function in timer, you’d write :timer.tc.
 
 ### Lists and Recursion
+A list may either be empty or consist of a head and a tail. The head contains a value and the tail is itself a list. This is a recursive definition. We’ll represent the empty list like this: \[\].
+Let’s imagine we could represent the split between the head and the tail using
+a pipe character, |. The single element list we normally write as \[3\] can be
+written as the value 3 joined to the empty list:
+`[ 3 | [] ]`
+
+``` elixir
+iex> [a, b, c ] = [ 1, 2, 3 ]
+[1, 2, 3]
+iex> a
+1
+iex> b
+2
+iex> c
+3
+```
+
+``` elixir
+iex> [ head | tail ] = [ 1, 2, 3 ]
+[1, 2, 3]
+iex> head
+1
+iex> tail
+[2, 3]
+```
+
+Recursive function to find the length of a list
+``` elixir
+defmodule MyList do
+  def len([]), do: 0
+  def len([head|tail]), do: 1 + len(tail)
+end
+```
+
