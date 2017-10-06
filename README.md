@@ -445,5 +445,91 @@ The |> operator takes the result of the expression to its left and inserts it as
 
 `you should always use parentheses around function parameters in pipelines.`
 
+### Modules
+Modules provide namespace for things you define. They encapsulate named functions and they also act as wrappers for macros, structs, protocols and other modules.
+``` elixir
+defmodule Mod do
+  def func1 do
+    IO.puts "in func1"
+  end
+  def func2 do
+    func1
+    IO.puts "in func2"
+  end
+end
+Mod.func1
+Mod.func2
+```
+Nested modules are also allowed in elixir
+```elixir
+defmodule Outer do
+  defmodule Inner do
+    def inner_func do
+    end
+  end
+  def outer_func do
+    Inner.inner_func
+  end
+end
+Outer.outer_func
+Outer.Inner.inner_func
+```
 
+#### Directives for Modules
+Elixir has three directives that simplify working with modules. All three are executed as your program runs, and the effect of all three is lexically scoped—it starts at the point the directive is encountered, and stops at the end of the enclosing scope. This means a directive in a module definition takes effect from the place you wrote it until the end of the module; a directive in a function definition runs to the end of the function.
 
+###### The import directive
+The import directive brings a module’s functions and/or macros into the current scope. If you use a particular module a lot in your code, import can cut down the clutter in your source files by eliminating the need to repeat the module name time and again.
+
+``` elixir
+defmodule Example do
+  def func1 do
+    List.flatten [1,[2,3],4]
+  end
+  def func2 do
+    import List, only: [flatten: 1]
+    flatten [5,[6,7],8]
+  end
+end
+```
+
+###### The alias directive
+The alias directive creates an alias for a module. One obvious use is to cut down on typing.
+``` elixir
+defmodule Example do
+  def compile_and_go(source) do
+    alias My.Other.Module.Parser, as: Parser
+    alias My.Other.Module.Runner, as: Runner
+    source
+    |> Parser.parse()
+    |> Runner.execute()
+  end
+end
+```
+
+###### The require directive
+You require a module if you want to use any macros it defines. This ensures that the macro definitions are available when your code is compiled.
+
+#### The Module attributes
+Elixir modules each have associated metadata. Each item of metadata is called an attribute of the module and is identified by a name. Inside a module, you can access these attributes by prefixing the name with an at sign (@). You give an attribute a value using the syntax
+
+``` elixir
+@name value
+```
+
+This works only at the top level of a module—you can’t set an attribute inside a function definition. You can, however, access attributes inside functions.
+``` elixir
+defmodule Example do
+  @author "Dave Thomas"
+  def get_author do
+    @author
+  end
+end
+IO.puts "Example was written by #{Example.get_author}"
+```
+These attributes are not variables in the conventional sense. Use them for configuration and metadata only.
+
+#### Calling a function in Erlang library
+The Erlang conventions for names are different—variables start with an uppercase letter and atoms are simple lowercase names. So, for example, the Erlang module timer is called just that, the atom timer. In Elixir we write that as :timer. If you want to refer to the tc function in timer, you’d write :timer.tc.
+
+### Lists and Recursion
