@@ -567,3 +567,239 @@ defmodule MyList do
 end
 ```
 
+function map takes a list, function and returns a new list containing the result of
+applying that function to each element in the original.
+```elixir
+def map([], _func), do: []
+def map([ head | tail ], func), do: [ func.(head) | map(tail, func) ]
+```
+
+##### Keeping track of values during recursion
+``` elixir
+defmodule MyList do
+  def sum([], total), do: total
+  def sum([ head | tail ], total), do: sum(tail, head+total)
+end
+```
+
+``` elixir
+defmodule MyList do
+  def sum(list), do: _sum(list, 0)
+  # private methods
+  defp _sum([], total), do: total
+  defp _sum([ head | tail ], total), do: _sum(tail, head+total)
+end
+```
+
+##### List of lists
+Let’s imagine we had recorded temperatures and rainfall at a number of weather stations. Each reading looks like this:
+```[ timestamp, location_id, temperature, rainfall ]```
+Our code is passed a list containing a number of these readings, and we want to report on the conditions for one particular location, number 27.
+```elixir
+defmodule WeatherHistory do
+  def for_location_27([]), do: []
+  def for_location_27([ [time, 27, temp, rain ] | tail]) do
+    [ [time, 27, temp, rain] | for_location_27(tail) ]
+  end
+  def for_location_27([ _ | tail]), do: for_location_27(tail)
+end
+```
+Our function is specific to a particular location, which is pretty limiting. We’d like to be able to pass in the location as a parameter. We can use pattern matching for this.
+``` elixir
+defmodule WeatherHistory do
+  def for_location([], _target_loc), do: []
+  def for_location([ [time, target_loc, temp, rain ] | tail], target_loc) do
+    [ [time, target_loc, temp, rain] | for_location(tail, target_loc) ]
+  end
+  def for_location([ _ | tail], target_loc), do: for_location(tail, target_loc)
+end
+```
+
+More improvement
+``` elixir
+defmodule WeatherHistory do
+  def for_location([], _target_loc), do: []
+  def for_location([ head = [_, target_loc, _, _ ] | tail], target_loc) do
+    [ head | for_location(tail, target_loc) ]
+  end
+  def for_location([ _ | tail], target_loc), do: for_location(tail, target_loc)
+end
+```
+
+##### The List Module
+```elixir
+#
+# Concatenate lists
+#
+iex> [1,2,3] ++ [4,5,6]
+[1, 2, 3, 4, 5, 6]
+#
+# Flatten
+#
+iex> List.flatten([[[1], 2], [[[3]]]])
+[1, 2, 3]
+#
+# Folding (like reduce, but can choose direction)
+#
+iex> List.foldl([1,2,3], "", fn value, acc -> "#{value}(#{acc})" end)
+"3(2(1()))"
+iex> List.foldr([1,2,3], "", fn value, acc -> "#{value}(#{acc})" end)
+"1(2(3()))"
+#
+# Updating in the middle (not a cheap operation)
+#
+iex> list = [ 1, 2, 3 ]
+[ 1, 2, 3 ]
+iex> List.replace_at(list, 2, "buckle my shoe")
+[1, 2, "buckle my shoe"]
+#
+# Accessing tuples within lists
+#
+iex> kw = [{:name, "Dave"}, {:likes, "Programming"}, {:where, "Dallas", "TX"}]
+[{:name, "Dave"}, {:likes, "Programming"}, {:where, "Dallas", "TX"}]
+iex> List.keyfind(kw, "Dallas", 1)
+{:where, "Dallas", "TX"}
+iex> List.keyfind(kw, "TX", 2)
+{:where, "Dallas", "TX"}
+iex> List.keyfind(kw, "TX", 1)
+nil
+iex> List.keyfind(kw, "TX", 1, "No city called TX")
+"No city called TX"
+iex> kw = List.keydelete(kw, "TX", 2)
+[name: "Dave", likes: "Programming"]
+iex> kw = List.keyreplace(kw, :name, 0, {:first_name, "Dave"})
+[first_name: "Dave", likes: "Programming"]
+```
+
+### Enum - Processing collections
+- Convert any collection into a list
+``` elixir
+iex> list = Enum.to_list 1..5
+[1, 2, 3, 4, 5]
+```
+- Concatenate collections
+``` elixir
+iex> Enum.concat([1,2,3], [4,5,6])
+[1, 2, 3, 4, 5, 6]
+iex> Enum.concat [1,2,3], 'abc'
+[1, 2, 3, 97, 98, 99]
+```
+- Create collections whose elements are some function of the original
+``` elixir
+iex> Enum.map(list, &(&1 * 10))
+[10, 20, 30, 40, 50]
+iex> Enum.map(list, &String.duplicate("*", &1))
+["*", "**", "***", "****", "*****"]
+```
+- Select elements by postion or criteria
+``` elxir
+iex> Enum.at(10..20, 3)
+13
+iex> Enum.at(10..20, 20)
+nil
+iex> Enum.at(10..20, 20, :no_one_here)
+:no_one_here
+iex> Enum.filter(list, &(&1 > 2))
+[3, 4, 5]
+iex> require Integer # to get access to is_even
+nil
+iex> Enum.filter(list, &Integer.is_even/1)
+[2, 4]
+iex> Enum.reject(list, &Integer.is_even/1)
+[1, 3, 5]
+```
+
+- Sort and compare elements
+``` elixir
+iex> Enum.sort ["there", "was", "a", "crooked", "man"]
+["a", "crooked", "man", "there", "was"]
+iex> Enum.sort ["there", "was", "a", "crooked", "man"],
+...> &(String.length(&1) <= String.length(&2))
+["a", "was", "man", "there", "crooked"]
+iex(4)> Enum.max ["there", "was", "a", "crooked", "man"]
+"was"
+iex(5)> Enum.max_by ["there", "was", "a", "crooked", "man"], &String.length/1
+"crooked"
+```
+
+- Split a collection
+``` elixir
+iex> Enum.take(list, 3)
+[1, 2, 3]
+iex> Enum.take_every list, 2
+[1, 3, 5]
+iex> Enum.take_while(list, &(&1 < 4))
+[1, 2, 3]
+iex> Enum.split(list, 3)
+{[1, 2, 3], [4, 5]}
+iex> Enum.split_while(list, &(&1 < 4))
+{[1, 2, 3], [4, 5]}
+```
+
+- Join a collection
+``` elixir
+iex> Enum.join(list)
+"12345"
+iex> Enum.join(list, ", ")
+"1, 2, 3, 4, 5"
+```
+
+- Predicate operations
+``` elixir
+iex> Enum.all?(list, &(&1 < 4))
+false
+iex> Enum.any?(list, &(&1 < 4))
+true
+iex> Enum.member?(list, 4)
+true
+iex> Enum.empty?(list)
+false
+```
+- Merge collections
+``` elixir
+iex> Enum.zip(list, [:a, :b, :c])
+[{1, :a}, {2, :b}, {3, :c}]
+iex> Enum.with_index(["once", "upon", "a", "time"])
+[{"once", 0}, {"upon", 1}, {"a", 2}, {"time", 3}]
+```
+
+- Fold elements into a single value
+``` elixir
+iex> Enum.reduce(1..100, &(&1+&2))
+5050
+iex> Enum.reduce(["now", "is", "the", "time"],fn word, longest ->
+...>    if String.length(word) > String.length(longest) do
+...>      word
+...>    else
+...>      longest
+...>    end
+...> end)
+"time"
+```
+
+### Control Flow
+
+##### if and unless
+``` elixir
+iex> if 1 == 1 do
+...>  "true part"
+...> else
+...>  "false part"
+...> end
+true part
+```
+
+unless is similar
+``` elixir
+iex> unless 1 == 1, do: "error", else: "OK"
+"OK"
+iex> unless 1 == 2, do: "OK", else: "error"
+"OK"
+iex> unless 1 == 2 do
+...>  "OK"
+...> else
+...>  "error"
+...> end
+"OK"
+```
+
